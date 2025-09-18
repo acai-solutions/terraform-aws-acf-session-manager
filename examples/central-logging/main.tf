@@ -79,7 +79,7 @@ locals {
 }
 
 module "aggregation" {
-  source = "../../central-logging"
+  source = "../../"
 
   session_manager_settings = local.session_manager_settings
   providers = {
