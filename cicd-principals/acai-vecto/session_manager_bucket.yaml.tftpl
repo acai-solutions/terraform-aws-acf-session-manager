@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "IAM Role used to provision Org CloudTrail Resources"
+
+Resources:
+  OrgCloudTrailBucketProvisioningRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "$${target_principal_role_name}"
+      Path: "$${target_principal_role_path}"
+      Description: "IAM Role used to provision the Organization CloudTrail Log Bucket"
+$${resource_tags_block}
+      AssumeRolePolicyDocument:
+        #add trust policy here
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              "AWS":
+                - "$${trustee_role_arn}"
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: "OrgCloudTrailBucketProvisioning"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: OrganizationStar
+                Effect: Allow
+                Action:
+                  - organizations:DescribeOrganization
+                Resource: "*"            
+              - Sid: ManageS3Buckets
+                Effect: Allow
+                Action:
+                  - s3:CreateBucket
+                  - s3:DeleteBucket
+                  - s3:Get*
+                  - s3:Put*
+                  - s3:ListBucket
+                Resource: 
+                  - arn:aws:s3:::${bucket_prefix}*
+              - Sid: KMSStar
+                Effect: Allow
+                Action:
+                  - kms:Create*
+                  - kms:Describe*
+                  - kms:List*
+                  - kms:Get*
+                Resource: "*"
+%{ if kms_cmk_arn != "" }
+              - Sid: KMSCloudTrail
+                Effect: Allow
+                Action:
+                  - kms:*
+                Resource: ${kms_cmk_arn}
+%{ else }
+              - Sid: KMSCloudTrail
+                Effect: Allow
+                Action:
+                  - kms:*
+                Resource: "*"
+%{ endif }
+%{ if bucket_notification_to_sns_name != "" }
+              - Sid: ManageSNSNotifications
+                Effect: Allow
+                Action:
+                  - sns:*
+                Resource: 
+                  - arn:aws:sns:*:*:${bucket_notification_to_sns_name}
+%{ endif }

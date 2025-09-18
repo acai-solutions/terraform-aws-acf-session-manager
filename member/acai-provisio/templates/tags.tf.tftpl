@@ -1,0 +1,3 @@
+%{ for key, value in map_of_tags ~}
+    "${key}" = "${value}"${ key != keys(map_of_tags)[length(keys(map_of_tags)) - 1] ? "," : "" }
+%{ endfor ~}
