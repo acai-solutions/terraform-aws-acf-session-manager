@@ -31,15 +31,14 @@ resource "aws_iam_role" "session_manager_instance_role_${lower(replace(primary_r
       }
     ]
   })
+  /* Enable this only during import and if you want to enforce the IAM Roles stritly follow the terraform code
   managed_policy_arns = [
     "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
     "arn:aws:iam::$${data.aws_caller_identity.current.account_id}:policy/${instance_profile_policy_name}",
   ]
-  inline_policy {}  
+  inline_policy {}    
+  */
   tags = local.tags
-  depends_on = [
-    aws_iam_policy.ssm_platform_permissions_policy_${lower(replace(primary_region, "-", "_"))}
-  ]
 }
 
 resource "aws_iam_instance_profile" "session_manager_${lower(replace(primary_region, "-", "_"))}" {
