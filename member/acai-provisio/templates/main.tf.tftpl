@@ -37,6 +37,9 @@ resource "aws_iam_role" "session_manager_instance_role_${lower(replace(primary_r
   ]
   inline_policy {}  
   tags = local.tags
+  depends_on = [
+    aws_iam_policy.ssm_platform_permissions_policy_${lower(replace(primary_region, "-", "_"))}"
+  ]
 }
 
 resource "aws_iam_instance_profile" "session_manager_${lower(replace(primary_region, "-", "_"))}" {
