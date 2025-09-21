@@ -315,24 +315,6 @@ data "aws_iam_policy_document" "session_manager_bucket" {
       values   = [data.aws_organizations_organization.org.id]
     }
   }
-  /*statement {
-    sid    = "EnforceSSLOnly"
-    effect = "Deny"
-    principals {
-      type        = "AWS"
-      identifiers = ["*"]
-    }
-    actions = ["s3:*"]
-    resources = [
-      "${aws_s3_bucket.session_manager_logs.arn}/*",
-      aws_s3_bucket.session_manager_logs.arn
-    ]
-    condition {
-      test     = "Bool"
-      variable = "aws:SecureTransport"
-      values   = ["false"]
-    }
-  }*/
 }
 
 resource "aws_s3_bucket_policy" "session_manager_logs" {
