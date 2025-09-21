@@ -1,0 +1,294 @@
+# ---------------------------------------------------------------------------------------------------------------------
+# ¦ DATA
+# ---------------------------------------------------------------------------------------------------------------------
+data "aws_caller_identity" "current" {}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# ¦ LOCALS
+# ---------------------------------------------------------------------------------------------------------------------
+locals {
+  tags = {
+${resource_tags}
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# ¦ IAM ROLE FOR EC2 INSTANCES
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_role" "session_manager_instance_role_${lower(replace(primary_region, "-", "_"))}" {
+  name = "${instance_profile_role_name}"
+  path = "${instance_profile_role_path}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+  /* Enable this only during import and if you want to enforce the IAM Roles stritly follow the terraform code
+  managed_policy_arns = [
+    "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+    "arn:aws:iam::$${data.aws_caller_identity.current.account_id}:policy/${instance_profile_policy_name}",
+  ]
+  inline_policy {}    
+  */
+  tags = local.tags
+}
+
+resource "aws_iam_instance_profile" "session_manager_${lower(replace(primary_region, "-", "_"))}" {
+  name = "${instance_profile_name}"
+  path = "${instance_profile_path}"
+  role = aws_iam_role.session_manager_instance_role_${lower(replace(primary_region, "-", "_"))}.name
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# ¦ IAM ROLE POLICIES
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_role_policy_attachment" "ssm_core_policy_${lower(replace(primary_region, "-", "_"))}" {
+  role       = aws_iam_role.session_manager_instance_role_${lower(replace(primary_region, "-", "_"))}.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_role_policy_attachment" "ssm_platform_permissions_policy_${lower(replace(primary_region, "-", "_"))}" {
+  count = ${central_logging_enabled} == true || ${local_logging_enabled} == true  ? 1 : 0
+
+  role       = aws_iam_role.session_manager_instance_role_${lower(replace(primary_region, "-", "_"))}.name
+  policy_arn = aws_iam_policy.ssm_platform_permissions_policy_${lower(replace(primary_region, "-", "_"))}[0].arn
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# ¦ IAM POLICIES
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_policy" "ssm_platform_permissions_policy_${lower(replace(primary_region, "-", "_"))}" {
+  count = ${central_logging_enabled} == true || ${local_logging_enabled} == true  ? 1 : 0
+
+  name   = "${instance_profile_policy_name}"
+  policy = data.aws_iam_policy_document.ssm_core_policy_${lower(replace(primary_region, "-", "_"))}.json
+  tags = local.tags
+}
+
+data "aws_iam_policy_document" "ssm_core_policy_${lower(replace(primary_region, "-", "_"))}" {
+%{ if instance_profile_role_additional_policy_grants != "" ~}
+  source_policy_documents = [<<-EOT
+${instance_profile_role_additional_policy_grants}
+EOT
+]
+%{ endif ~}
+
+%{ if local_logging_enabled == true ~}
+  statement { 
+    sid    = "LocalCloudwatchLogsRead"
+    effect = "Allow"
+    actions = [
+      "logs:DescribeLogGroups",
+      "logs:DescribeLogStreams",
+      "logs:CreateLogGroup"
+    ]
+    resources = ["*"]
+  }  
+  statement { 
+    sid    = "LocalCloudwatchLogs"
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+    ]
+    resources = [
+      "*",
+%{ for region in concat([primary_region], secondary_regions) ~}
+      aws_cloudwatch_log_group.session_manager_${lower(replace(region, "-", "_"))}.arn,
+      "$${aws_cloudwatch_log_group.session_manager_${lower(replace(region, "-", "_"))}.arn}:*",
+%{ endfor ~}
+    ]
+  }  
+  statement { 
+    sid    = "LocalCloudwatchLogsKMS"
+    effect = "Allow"
+    actions = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey*"
+    ]
+    resources = [
+%{ for region in concat([primary_region], secondary_regions) ~}
+      aws_kms_key.cloudwatch_logs_kms_${lower(replace(region, "-", "_"))}.arn,
+%{ endfor ~}
+    ]
+  }
+%{ endif ~}
+
+%{ if central_logging_enabled == true ~}
+  statement { 
+    sid    = "CentralSessionManagerS3List"
+    effect = "Allow"
+    actions = [
+      "s3:GetEncryptionConfiguration"
+    ]
+    resources = [
+      "${central_s3_bucket_arn}"
+    ]
+  }  
+  statement { 
+    sid    = "CentralSessionManagerS3PutObjects"
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:PutObjectAcl",
+      "s3:GetObject"
+    ]
+    resources = [
+      "${central_s3_bucket_arn}/*"
+    ]
+  }  
+  statement { 
+    sid    = "CentralSessionManagerS3KMS"
+    effect = "Allow"
+    actions = [
+      "kms:Decrypt",
+      "kms:Encrypt",
+      "kms:GenerateDataKey*"      
+    ]
+    resources = [
+      "${central_s3_bucket_kms_arn}"
+    ]
+  }
+%{ endif ~}
+}
+
+
+%{ for region in concat([primary_region], secondary_regions) ~}
+# ---------------------------------------------------------------------------------------------------------------------
+# ¦ REGIONAL DATA
+# ---------------------------------------------------------------------------------------------------------------------
+data "aws_region" "region_${lower(replace(region, "-", "_"))}" {
+  provider = aws.${lower(replace(region, "-", "_"))}
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# ¦ SSM SESSION MANAGER PREFERENCES
+# ---------------------------------------------------------------------------------------------------------------------
+# https://repost.aws/knowledge-center/ssm-s3-bucket-logging-multiple-accounts
+resource "aws_ssm_document" "session_manager_prefs_${lower(replace(region, "-", "_"))}" {
+  name            = "${ssm_document_name}"
+  document_type   = "Session"
+  document_format = "JSON"
+  content = jsonencode({
+    schemaVersion = "1.0"
+    description   = "Document for Session Manager"
+    sessionType   = "Standard_Stream"
+    inputs = {
+      s3BucketName                = "${central_s3_bucket_name}"
+      s3KeyPrefix                 = "${ssm_document_central_s3_bucket_prefix}$${data.aws_caller_identity.current.account_id}/"
+      s3EncryptionEnabled         = false  # S3 bucket encryption is handled by KMS CMK in Core Logging account
+%{ if local_logging_enabled == true ~}      
+      cloudWatchLogGroupName      = aws_cloudwatch_log_group.session_manager_${lower(replace(region, "-", "_"))}.name
+      cloudWatchEncryptionEnabled = true
+      cloudWatchStreamingEnabled  = true
+      kmsKeyId                    = aws_kms_key.cloudwatch_logs_kms_${lower(replace(region, "-", "_"))}.id
+%{ endif ~}
+      runAsEnabled                = ${ssm_document_run_as_enabled}
+      runAsDefaultUser            = "${ssm_document_run_as_user}"
+      shellProfile = {
+        linux   = "echo 'Session started'; date"
+        windows = "write-host 'Session started'; Get-Date"
+      }
+    }
+  })
+  tags = local.tags
+  provider = aws.${lower(replace(region, "-", "_"))}
+}
+
+%{ if local_logging_enabled == true ~}
+# ---------------------------------------------------------------------------------------------------------------------
+# ¦ CLOUDWATCH LOGGROUP
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_cloudwatch_log_group" "session_manager_${lower(replace(region, "-", "_"))}" {
+  name              = "${log_group_name}"
+  retention_in_days = ${log_retention_in_days}
+  kms_key_id        = aws_kms_key.cloudwatch_logs_kms_${lower(replace(region, "-", "_"))}.arn
+  
+  tags     = local.tags
+  provider = aws.${lower(replace(region, "-", "_"))}
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# ¦ KMS KEY FOR CLOUDWATCH LOGS
+# ---------------------------------------------------------------------------------------------------------------------
+# https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/encrypt-log-data-kms.html
+resource "aws_kms_key" "cloudwatch_logs_kms_${lower(replace(region, "-", "_"))}" {
+  description             = "KMS key for SSM Session Manager CloudWatch logs"
+  deletion_window_in_days = ${kms_deletion_window_in_days}
+  enable_key_rotation     = true
+  policy                  = data.aws_iam_policy_document.cloudwatch_logs_kms_${lower(replace(region, "-", "_"))}.json
+
+  tags     = local.tags
+  provider = aws.${lower(replace(region, "-", "_"))}
+  depends_on = [
+    aws_iam_role.session_manager_instance_role_${lower(replace(primary_region, "-", "_"))}    
+  ]
+}
+
+resource "aws_kms_alias" "cloudwatch_logs_kms_${lower(replace(region, "-", "_"))}" {
+  name          = "alias/${key_alias}"
+  target_key_id = aws_kms_key.cloudwatch_logs_kms_${lower(replace(region, "-", "_"))}.id
+  provider = aws.${lower(replace(region, "-", "_"))}
+}
+
+data "aws_iam_policy_document" "cloudwatch_logs_kms_${lower(replace(region, "-", "_"))}" {
+  statement {
+    sid    = "Enable IAM User Permissions"
+    effect = "Allow"
+    principals {
+      type = "AWS"
+      identifiers = [
+        "arn:aws:iam::$${data.aws_caller_identity.current.account_id}:root"
+      ]
+    }
+    actions   = ["kms:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "Allow CloudWatch Logs"
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["logs.$${data.aws_region.region_${lower(replace(region, "-", "_"))}.name}.amazonaws.com"]
+    }
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:Describe*"
+    ]
+    resources = ["*"]
+    condition {
+      test     = "ArnEquals"
+      variable = "kms:EncryptionContext:aws:logs:arn"
+      values   = ["arn:aws:logs:$${data.aws_region.region_${lower(replace(region, "-", "_"))}.name}:$${data.aws_caller_identity.current.account_id}:log-group:${log_group_name}"]
+    }
+  }
+  statement {
+    sid    = "Allow Session Manager"
+    effect = "Allow"
+    principals {
+      type        = "AWS"
+      identifiers = [
+        "arn:aws:iam::$${data.aws_caller_identity.current.account_id}:role/${instance_profile_role_name}"
+      ]
+    }
+    actions = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey"
+    ]
+    resources = ["*"]
+  }
+}
+%{ endif ~}
+%{ endfor }

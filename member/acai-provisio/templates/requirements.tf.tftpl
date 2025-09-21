@@ -1,0 +1,17 @@
+terraform {
+    required_version = "${terraform_version}"
+  
+    required_providers {
+      aws = {
+        source  = "hashicorp/aws"
+        version = "${provider_aws_version}"
+        configuration_aliases = [
+          aws,
+%{ for region in all_regions ~}
+          aws.${lower(replace(region, "-", "_"))},
+%{ endfor ~}
+        ]
+      }
+    }
+  }
+  

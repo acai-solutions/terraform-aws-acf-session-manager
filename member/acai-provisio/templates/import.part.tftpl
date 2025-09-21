@@ -1,0 +1,14 @@
+terraform import module.${tf_module_name}.aws_iam_role.session_manager_instance_role_${lower(replace(primary_region, "-", "_"))} ${instance_profile_role_name}
+terraform import module.${tf_module_name}.aws_iam_instance_profile.session_manager_${lower(replace(primary_region, "-", "_"))} ${instance_profile_name}
+terraform import module.${tf_module_name}.aws_iam_policy.ssm_platform_permissions_policy_${lower(replace(primary_region, "-", "_"))}[0] arn:aws:iam::$${AWS::AccountId}:policy/${instance_profile_policy_name}
+
+%{ for region in all_regions ~}
+terraform import module.${tf_module_name}.aws_ssm_document.session_manager_prefs_${lower(replace(region, "-", "_"))} ${ssm_document_name}
+
+%{ if local_logging_enabled == true ~}
+terraform import module.${tf_module_name}.aws_cloudwatch_log_group.session_manager_${lower(replace(region, "-", "_"))} ${log_group_name}
+%{ endif ~}
+
+%{ endfor }
+
+
