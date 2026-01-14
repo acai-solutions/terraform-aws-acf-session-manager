@@ -13,37 +13,22 @@
 ![trivy-shield]
 ![checkov-shield]
 
-<!-- DESCRIPTION -->
+<!-- BEGIN_ACAI_DOCS -->
 [Terraform][terraform-url] module to deploy AWS SSM Session Manager resources on [AWS][aws-url]
 
 <!-- ARCHITECTURE -->
 ## Architecture
 
-![architecture][architecture]
+![architecture]
 
 <!-- FEATURES -->
 ## Features
 
-* S3-Logging in Central Account
-* CloudWatch Logging to local Account
+This module is designed to support:
 
-
-
-<!-- AUTHORS -->
-## Authors
-
-This module is maintained by [ACAI GmbH][acai-url].
-
-<!-- LICENSE -->
-## License
-
-See [LICENSE][license-url] for full details.
-
-<!-- COPYRIGHT --><br />
-<br />
-<p align="center">Copyright &copy; 2024 ACAI GmbH</p>
-
-
+- S3-Logging in Central Account
+- CloudWatch Logging to local Account
+<!-- END_ACAI_DOCS -->
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -103,11 +88,27 @@ No modules.
 | <a name="output_session_manager_to_write"></a> [session\_manager\_to\_write](#output\_session\_manager\_to\_write) | Session Manager Output. |
 <!-- END_TF_DOCS -->
 
+<!-- AUTHORS -->
+## Authors
+
+This module is maintained by [ACAI GmbH][acai-url].
+
+<!-- LICENSE -->
+## License
+
+See [LICENSE][license-url] for full details.
+
+<!-- COPYRIGHT --><br />
+<br />
+<p align="center">Copyright &copy; 2024 ACAI GmbH</p>
+
+
+
 <!-- MARKDOWN LINKS & IMAGES -->
 [acai-shield]: https://img.shields.io/badge/maintained_by-acai.gmbh-CB224B?style=flat
 [acai-docs-shield]: https://img.shields.io/badge/documentation-docs.acai.gmbh-CB224B?style=flat
 [acai-url]: https://acai.gmbh
-[acai-docs-url]: https://docs.acai.gmbh
+[acai-docs-url]: https://docs.acai.gmbh/solution-acf/10_overview/
 [module-version-shield]: https://img.shields.io/badge/module_version-1.2.5-CB224B?style=flat
 [module-release-url]: ./releases
 [terraform-version-shield]: https://img.shields.io/badge/tf-%3E%3D1.3.10-blue.svg?style=flat&color=blueviolet

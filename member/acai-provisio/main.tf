@@ -26,7 +26,7 @@ locals {
       {
         "module_provider" = "ACAI GmbH",
         "module_name"     = "terraform-aws-acf-session-manager",
-        "module_source"   = "github.com/acai-consulting/terraform-aws-acf-session-manager",
+        "module_source"   = "github.com/acai-solutions/terraform-aws-acf-session-manager",
         "module_feature"  = "member",
         "module_version"  = /*inject_version_start*/ "1.2.5" /*inject_version_end*/
       }

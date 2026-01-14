@@ -1,4 +1,4 @@
-module github.com/acai-consulting/terraform-aws-acf-core-state/test
+module github.com/acai-solutions/terraform-aws-acf-core-state/test
 
 go 1.21
 
