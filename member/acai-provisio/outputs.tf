@@ -10,13 +10,24 @@
 
 
 output "provisio_package_name" {
-  value = var.provisio_settings.provisio_package_name
+  description = "The name of the Provisio package"
+  value       = var.provisio_settings.provisio_package_name
 }
 
 output "tf_module_name" {
-  value = local.tf_module_name
+  description = "The Terraform module name"
+  value       = local.tf_module_name
 }
 
 output "provisio_package_files" {
-  value = local.provisio_package_files
+  description = "The list of files included in the Provisio package"
+  value       = local.provisio_package_files
+}
+
+output "target_regions" {
+  description = "The sorted list of target regions including primary and secondary regions"
+  value = sort(distinct(concat(
+    [var.provisio_settings.provisio_regions.primary_region],
+    var.provisio_settings.provisio_regions.secondary_regions,
+  )))
 }
