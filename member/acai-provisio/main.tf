@@ -53,7 +53,7 @@ locals {
     var.provisio_settings.import_resources ? ({
       "import.part" = templatefile("${path.module}/templates/import.part.tftpl", {
         tf_module_name               = local.tf_module_name
-        primary_region               = var.provisio_settings.provisio_regions.primary_region
+        primary_region               = var.provisio_settings.target_regions.primary_region
         all_regions                  = local.all_regions
         local_logging_enabled        = local.local_logging_enabled
         ssm_document_name            = local.ssm_document_name
@@ -67,8 +67,8 @@ locals {
     }),
     {
       "main.tf" = templatefile("${path.module}/templates/main.tf.tftpl", {
-        primary_region                                 = var.provisio_settings.provisio_regions.primary_region
-        secondary_regions                              = var.provisio_settings.provisio_regions.secondary_regions
+        primary_region                                 = var.provisio_settings.target_regions.primary_region
+        secondary_regions                              = var.provisio_settings.target_regions.secondary_regions
         central_logging_enabled                        = local.central_logging_enabled
         local_logging_enabled                          = local.local_logging_enabled
         central_s3_bucket_name                         = local.central_logging_enabled ? var.session_manager_settings.central_logging.s3_bucket.bucket_name : ""
