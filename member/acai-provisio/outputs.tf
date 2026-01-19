@@ -9,14 +9,27 @@
 # For commercial licensing, contact: contact@acai.gmbh
 
 
-output "provisio_package_name" {
-  value = var.provisio_settings.provisio_package_name
+output "package_id" {
+  description = "The unique ID of the PROVISIO package"
+  value       = "${var.provisio_settings.package_name}-${random_uuid.module_id.result}"
+}
+
+output "package_name" {
+  description = "The name of the PROVISIO package"
+  value       = var.provisio_settings.package_name
 }
 
 output "tf_module_name" {
-  value = local.tf_module_name
+  description = "The Terraform module name"
+  value       = local.tf_module_name
 }
 
-output "provisio_package_files" {
-  value = local.provisio_package_files
+output "tf_provider_regions" {
+  description = "The list of Terraform provider regions"
+  value       = local.all_regions
+}
+
+output "package_files" {
+  description = "The list of files included in the PROVISIO package"
+  value       = local.package_files
 }

@@ -91,7 +91,7 @@ module "member_files" {
   source = "../../member/acai-provisio"
 
   provisio_settings = {
-    provisio_regions = local.regions_settings
+    target_regions = local.regions_settings
   }
   session_manager_settings = merge(
     {
@@ -112,7 +112,7 @@ module "member_files" {
 
 # Loop through the map and create a file for each entry
 resource "local_file" "package_files" {
-  for_each = module.member_files.provisio_package_files
+  for_each = module.member_files.package_files
 
   filename = "${path.module}/../member-provisio/rendered/${each.key}" # Each key becomes the filename
   content  = each.value                                               # Each value becomes the file content

@@ -12,14 +12,20 @@
 variable "provisio_settings" {
   description = "ACAI PROVISIO settings"
   type = object({
-    provisio_package_name = optional(string, "aws-session-manager")
-    override_module_name  = optional(string, null)
-    provisio_regions = object({
+    package_name         = optional(string, "aws-session-manager")
+    override_module_name = optional(string, null)
+    terraform_version    = optional(string, ">= 1.3.10")
+    provider_aws_version = optional(string, ">= 4.00")
+    target_regions = object({
       primary_region    = string
       secondary_regions = list(string)
     })
     import_resources = optional(bool, false)
   })
+  validation {
+    condition     = !contains(var.provisio_settings.target_regions.secondary_regions, var.provisio_settings.target_regions.primary_region)
+    error_message = "The primary region must not be included in the secondary regions."
+  }
 }
 
 variable "session_manager_settings" {
@@ -101,6 +107,9 @@ variable "additional_ssm_policy_grants" {
   default     = null
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# ¦ COMMON
+# ---------------------------------------------------------------------------------------------------------------------
 variable "resource_tags" {
   description = "A map of tags to assign to the resources in this module."
   type        = map(string)
