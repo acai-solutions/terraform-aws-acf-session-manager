@@ -12,7 +12,7 @@
 variable "provisio_settings" {
   description = "ACAI PROVISIO settings"
   type = object({
-    package_name         = optional(string, "aws-config")
+    package_name         = optional(string, "aws-session-manager")
     override_module_name = optional(string, null)
     terraform_version    = optional(string, ">= 1.3.10")
     provider_aws_version = optional(string, ">= 4.00")
