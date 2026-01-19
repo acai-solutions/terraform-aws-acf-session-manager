@@ -40,7 +40,7 @@ locals {
     {
       "module_provider" = "ACAI GmbH",
       "module_name"     = "terraform-aws-acf-session-manager",
-      "module_version"  = /*inject_version_start*/ "1.2.5" /*inject_version_end*/
+      "module_version"  = /*inject_version_start*/ "1.3.0" /*inject_version_end*/
     }
   )
 }
