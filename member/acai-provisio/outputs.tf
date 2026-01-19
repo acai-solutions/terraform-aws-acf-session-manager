@@ -9,9 +9,14 @@
 # For commercial licensing, contact: contact@acai.gmbh
 
 
-output "provisio_package_name" {
-  description = "The name of the Provisio package"
-  value       = var.provisio_settings.provisio_package_name
+output "package_id" {
+  description = "The unique ID of the PROVISIO package"
+  value       = "${var.provisio_settings.package_name}-${random_uuid.module_id.result}"
+}
+
+output "package_name" {
+  description = "The name of the PROVISIO package"
+  value       = var.provisio_settings.package_name
 }
 
 output "tf_module_name" {
@@ -19,15 +24,12 @@ output "tf_module_name" {
   value       = local.tf_module_name
 }
 
-output "provisio_package_files" {
-  description = "The list of files included in the Provisio package"
-  value       = local.provisio_package_files
+output "tf_provider_regions" {
+  description = "The list of Terraform provider regions"
+  value       = local.all_regions
 }
 
-output "target_regions" {
-  description = "The sorted list of target regions including primary and secondary regions"
-  value = sort(distinct(concat(
-    [var.provisio_settings.provisio_regions.primary_region],
-    var.provisio_settings.provisio_regions.secondary_regions,
-  )))
+output "package_files" {
+  description = "The list of files included in the PROVISIO package"
+  value       = local.package_files
 }
